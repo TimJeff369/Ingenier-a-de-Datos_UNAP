@@ -4,6 +4,28 @@ import pandas as pd
 import plotly.express as px
 import numpy as np
 
+
+import streamlit as st
+
+# --- INYECTAR FUENTE OSWALD ---
+st.markdown(
+    """
+    <style>
+    @import url('https://fonts.googleapis.com/css2?family=Oswald:wght@200..700&display=swap');
+
+    html, body, [class*="css"], .stMarkdown, h1, h2, h3, h4, h5, h6, p, div {
+        font-family: 'Oswald', sans-serif !important;
+    }
+    </style>
+    """,
+    unsafe_allow_html=True
+)
+
+# El resto de tu código sigue igual...
+st.title("🛡️ Sistema Predictivo de Inseguridad - Región Puno")
+
+
+
 st.set_page_config(page_title="Seguridad Puno", layout="wide")
 
 st.title("🛡️ Sistema Predictivo de Inseguridad - Región Puno")
