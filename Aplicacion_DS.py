@@ -131,3 +131,24 @@ st.plotly_chart(fig_mapa, use_container_width=True)
 
 
 
+
+
+
+
+
+
+
+
+
+
+# --- PIE DE PÁGINA (FOOTER) ---
+st.markdown("---") # Una línea divisoria para separar el contenido
+st.markdown(
+    """
+    <div style="text-align: center;">
+        <p>© 2026 Derechos Reservados - Ing. Mario - Universidad Nacional del Altiplano</p>
+        <small>Investigación Estadística sobre Seguridad Ciudadana - Región Puno</small>
+    </div>
+    """,
+    unsafe_allow_html=True
+)
