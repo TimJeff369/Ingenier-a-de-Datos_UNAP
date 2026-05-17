@@ -146,7 +146,7 @@ st.markdown("---") # Una línea divisoria para separar el contenido
 st.markdown(
     """
     <div style="text-align: center;">
-        <p>© 2026 Derechos Reservados - Ing. Mario D. Nina Córdova - Universidad Nacional del Altiplano</p>
+        <p>© 2026 Derechos Reservados - Universidad Nacional del Altiplano</p>
         <small>Investigación Estadística sobre Seguridad Ciudadana - Región Puno</small>
     </div>
     """,
