@@ -67,3 +67,67 @@ with col2:
     st.plotly_chart(fig, use_container_width=True)
 
 st.success(f"Modelo calibrado para {ciudad} exitosamente.")
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+# --- SECCIÓN DEL MAPA DE RIESGO ---
+st.subheader("📍 Mapa de Riesgo Geoespacial - Región Puno")
+
+# Datos de coordenadas para el mapa (Simulados según tu lista de ciudades)
+# Puedes ajustar los valores de 'Riesgo' para cambiar los colores
+data_mapa = pd.DataFrame({
+    'Ciudad': ['Puno', 'Juliaca', 'Azángaro'],
+    'lat': [-15.8402, -15.4967, -14.9089],
+    'lon': [-70.0219, -70.1333, -70.1889],
+    'Riesgo': [1.5, 3.8, 0.8], # Usamos los lambdas (promedios)
+    'Nivel': ['Medio', 'Alto', 'Bajo']
+})
+
+# Definir colores: Rojo (Alto), Naranja (Medio), Verde (Bajo)
+def asignar_color(valor):
+    if valor > 2.5: return 'red'
+    elif valor > 1.0: return 'orange'
+    else: return 'green'
+
+data_mapa['Color'] = data_mapa['Riesgo'].apply(asignar_color)
+
+import plotly.express as px
+
+fig_mapa = px.scatter_mapbox(
+    data_mapa, 
+    lat="lat", 
+    lon="lon", 
+    color="Nivel",
+    color_discrete_map={"Alto": "red", "Medio": "orange", "Bajo": "green"},
+    size="Riesgo",
+    hover_name="Ciudad",
+    zoom=7, 
+    height=500,
+    mapbox_style="carto-positron"
+)
+
+st.plotly_chart(fig_mapa, use_container_width=True)
+
+
+
+
