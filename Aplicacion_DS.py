@@ -152,3 +152,56 @@ st.markdown(
     """,
     unsafe_allow_html=True
 )
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+import pandas as pd
+from scipy.stats import poisson
+
+# 1. Carga mínima de datos
+df = pd.read_csv('delitos-denunciados-2019.csv', usecols=['ubigeo_pjfs', 'cantidad', 'fecha_corte'])
+
+# 2. Filtrado estratégico (Juliaca vs Puno)
+# Juliaca: 211101 | Puno: 210101
+data_juliaca = df[df['ubigeo_pjfs'] == 211101]
+data_puno = df[df['ubigeo_pjfs'] == 210101]
+
+# 3. Cálculo de la Tasa de Ocurrencia (Lambda)
+# Sumamos todas las cantidades y dividimos entre los días del periodo (ej. 365)
+dias = 365
+lambda_juliaca = data_juliaca['cantidad'].sum() / dias
+lambda_puno = data_puno['cantidad'].sum() / dias
+
+print(f"--- RESULTADOS PARA EL CAPÍTULO IV ---")
+print(f"Lambda Juliaca (Promedio diario): {lambda_juliaca:.2f}")
+print(f"Lambda Puno (Promedio diario): {lambda_puno:.2f}")
+
+# 4. Cálculo de Probabilidad (Ejemplo: Probabilidad de que ocurran exactamente 5 delitos mañana)
+prob_5_juliaca = poisson.pmf(5, lambda_juliaca)
+print(f"Probabilidad de 5 delitos en Juliaca: {prob_5_juliaca * 100:.2f}%")
+
+
+
+
