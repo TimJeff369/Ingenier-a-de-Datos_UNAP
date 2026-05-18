@@ -21,8 +21,6 @@ st.markdown(
     unsafe_allow_html=True
 )
 
-# El resto de tu código sigue igual...
-st.title("🛡️ Sistema Predictivo de Inseguridad - Región Puno")
 
 
 
