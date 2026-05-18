@@ -178,27 +178,45 @@ st.markdown(
 import pandas as pd
 from scipy.stats import poisson
 
-# 1. Carga mínima de datos
-df = pd.read_csv('delitos_denunciados_2019.csv', usecols=['ubigeo_pjfs', 'cantidad', 'fecha_corte'])
+# 1. Carga de datos con las columnas exactas de tu imagen
+# He agregado 'prov_pjfs' para asegurar el filtrado si el ubigeo falla
+df = pd.read_csv('delitos_denunciados_2019.csv', usecols=['ubigeo_pjfs', 'cantidad', 'fecha_corte', 'prov_pjfs'])
 
-# 2. Filtrado estratégico (Juliaca vs Puno)
-# Juliaca: 211101 | Puno: 210101
-data_juliaca = df[df['ubigeo_pjfs'] == 211101]
-data_puno = df[df['ubigeo_pjfs'] == 210101]
+# --- TRUCO DE INGENIERÍA: Limpieza de datos ---
+# Convertimos a string y quitamos espacios por si acaso
+df['ubigeo_pjfs'] = df['ubigeo_pjfs'].astype(str).str.strip()
+df['prov_pjfs'] = df['prov_pjfs'].astype(str).str.upper().str.strip()
+
+# 2. Filtrado estratégico mejorado
+# Filtramos por UBIGEO (como texto) O por nombre de PROVINCIA
+data_juliaca = df[(df['ubigeo_pjfs'] == '211101') | (df['prov_pjfs'] == 'SAN ROMAN')]
+data_puno = df[(df['ubigeo_pjfs'] == '210101') | (df['prov_pjfs'] == 'PUNO')]
+
+# Comprobación de seguridad (Esto aparecerá en tu terminal)
+print(f"Filas encontradas para Juliaca: {len(data_juliaca)}")
+print(f"Filas encontradas para Puno: {len(data_puno)}")
 
 # 3. Cálculo de la Tasa de Ocurrencia (Lambda)
-# Sumamos todas las cantidades y dividimos entre los días del periodo (ej. 365)
 dias = 365
-lambda_juliaca = data_juliaca['cantidad'].sum() / dias
-lambda_puno = data_puno['cantidad'].sum() / dias
+# Usamos sum() por si la columna 'cantidad' tiene valores mayores a 1
+total_juliaca = data_juliaca['cantidad'].sum()
+total_puno = data_puno['cantidad'].sum()
 
-print(f"--- RESULTADOS PARA EL CAPÍTULO IV ---")
-print(f"Lambda Juliaca (Promedio diario): {lambda_juliaca:.2f}")
-print(f"Lambda Puno (Promedio diario): {lambda_puno:.2f}")
+lambda_juliaca = total_juliaca / dias
+lambda_puno = total_puno / dias
 
-# 4. Cálculo de Probabilidad (Ejemplo: Probabilidad de que ocurran exactamente 5 delitos mañana)
-prob_5_juliaca = poisson.pmf(5, lambda_juliaca)
-print(f"Probabilidad de 5 delitos en Juliaca: {prob_5_juliaca * 100:.2f}%")
+print(f"\n--- RESULTADOS PARA EL CAPÍTULO IV ---")
+print(f"Total delitos Juliaca: {total_juliaca}")
+print(f"Total delitos Puno: {total_puno}")
+print(f"Lambda Juliaca (λ promedio diario): {lambda_juliaca:.4f}")
+print(f"Lambda Puno (λ promedio diario): {lambda_puno:.4f}")
+
+# 4. Cálculo de Probabilidad (Ejemplo: Probabilidad de que ocurran exactamente 5 delitos)
+if lambda_juliaca > 0:
+    prob_5_juliaca = poisson.pmf(5, lambda_juliaca)
+    print(f"Probabilidad de exactamente 5 delitos en Juliaca: {prob_5_juliaca * 100:.2f}%")
+else:
+    print("⚠️ No se pudo calcular probabilidad porque Lambda es 0. Revisa el nombre del archivo.")
 
 
 
