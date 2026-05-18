@@ -179,7 +179,7 @@ import pandas as pd
 from scipy.stats import poisson
 
 # 1. Carga mínima de datos
-df = pd.read_csv('delitos-denunciados-2019.csv', usecols=['ubigeo_pjfs', 'cantidad', 'fecha_corte'])
+df = pd.read_csv('delitos_denunciados_2019.csv', usecols=['ubigeo_pjfs', 'cantidad', 'fecha_corte'])
 
 # 2. Filtrado estratégico (Juliaca vs Puno)
 # Juliaca: 211101 | Puno: 210101
