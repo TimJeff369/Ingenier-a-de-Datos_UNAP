@@ -108,4 +108,4 @@ with col2:
     st.plotly_chart(fig_poisson, use_container_width=True)
 
 st.markdown("---")
-st.caption("© 2026 Todos los Derechos Reservados - Universidad Nacional del Altiplano-Escuela Profesional de Ingeniería Informática - ESTADO DEL INVESTIGADOR: CACHIMBO XD 😂🤣.")
+st.caption("© 2026 Todos los Derechos Reservados - Universidad Nacional del Altiplano-Escuela Profesional de Ingeniería Estadística e Informática - ESTADO DEL INVESTIGADOR: CACHIMBO XD 😂🤣.")
