@@ -23,7 +23,7 @@ def cargar_datos_procesados():
         df_crimen.rename(columns={'UBIGEO_HECHO': 'inei'}, inplace=True)
 
         # Excel 2: Diccionario UBIGEO y Socioeconómico
-        df_socio = pd.read_excel("ubigeo_distrito.xlsx", engine='openpyxl')
+        df_socio = pd.read_csv("ubigeo_distrito.csv")
         
         # Archivo GeoJSON: Polígonos de departamentos
         with open("peru_departamentos.geojson", encoding='utf-8') as f:
