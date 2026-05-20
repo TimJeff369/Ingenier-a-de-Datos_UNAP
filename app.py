@@ -35,14 +35,18 @@ df_melt['Año'] = df_melt['Año'].str.replace('Denuncias_', '')
 
 # --- 3. BARRA LATERAL (FILTROS INTERACTIVOS) ---
 st.sidebar.header("Filtros de Análisis")
-# Obtenemos la lista única de provincias
-provincias = sorted(df['PROV_HECHO'].unique().tolist())
-provincia_sel = st.sidebar.selectbox("1. Selecciona una Provincia:", provincias)
 
-# Filtramos distritos basados en la provincia seleccionada
-distritos = sorted(df[df['PROV_HECHO'] == provincia_sel]['DIST_HECHO'].unique().tolist())
-distrito_sel = st.sidebar.selectbox("2. Selecciona un Distrito:", distritos)
+# 1. Filtro de Región (Departamento)
+regiones = sorted(df['DPTO_HECHO'].unique().tolist())
+region_sel = st.sidebar.selectbox("1. Selecciona una Región (Departamento):", regiones)
 
+# 2. Filtro de Provincia (Depende de la Región seleccionada)
+provincias = sorted(df[df['DPTO_HECHO'] == region_sel]['PROV_HECHO'].unique().tolist())
+provincia_sel = st.sidebar.selectbox("2. Selecciona una Provincia:", provincias)
+
+# 3. Filtro de Distrito (Depende de la Provincia seleccionada)
+distritos = sorted(df[(df['DPTO_HECHO'] == region_sel) & (df['PROV_HECHO'] == provincia_sel)]['DIST_HECHO'].unique().tolist())
+distrito_sel = st.sidebar.selectbox("3. Selecciona un Distrito:", distritos)
 # --- 4. SECCIÓN VISUAL: COMPARATIVA REGIONAL ---
 st.header("📈 Comparativa Regional Destacada")
 st.write("Evolución de las denuncias en las provincias clave de la región.")
