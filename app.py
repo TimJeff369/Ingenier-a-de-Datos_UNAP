@@ -18,12 +18,12 @@ def cargar_datos_procesados():
     # A. Carga de Archivos Principales
     try:
         # Excel 1: Denuncias Distritales (Asegúrate que tenga columna 'inei')
-        df_crimen = pd.read_excel("datos.xlsx")
+        df_crimen = pd.read_excel("datos.xlsx", engine='openpyxl')
         df_crimen.fillna(0, inplace=True)
         df_crimen.rename(columns={'UBIGEO_HECHO': 'inei'}, inplace=True)
 
         # Excel 2: Diccionario UBIGEO y Socioeconómico
-        df_socio = pd.read_excel("ubigeo_distrito.xlsx")
+        df_socio = pd.read_excel("ubigeo_distrito.xlsx", engine='openpyxl')
         
         # Archivo GeoJSON: Polígonos de departamentos
         with open("peru_departamentos.geojson", encoding='utf-8') as f:
