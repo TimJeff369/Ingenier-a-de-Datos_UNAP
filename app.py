@@ -36,19 +36,16 @@ def cargar_datos_procesados():
     # ---------------------------------------------------------
     # B. Ingeniería 1: Preparación de Datos de Crimen (Melt)
     # ---------------------------------------------------------
-    df_crimen_melt = pd.melt(df_crimen, id_vars=['DPTO_HECHO', 'PROV_HECHO', 'DIST_HECHO', 'inei'], 
-                            value_vars=['Denuncias_2017', 'Denuncias_2018', 'Denuncias_2019'],
-                            var_name='Año', value_name='Denuncias')
-    df_crimen_melt['Año'] = df_crimen_melt['Año'].str.replace('Denuncias_', '')
+# 1. Agrega esto justo antes del merge para arreglar el error:
+        df_crimen_melt['inei'] = df_crimen_melt['inei'].astype(str)
+        df_socio['inei'] = df_socio['inei'].astype(str)
+        
+        # 2. Y aquí realizas el merge que ya tenías:
+        df_distrital = pd.merge(df_crimen_melt, 
+                                df_socio[['inei', 'region', 'superficie', 'pob_densidad_2020', 
+                                          'altitude', 'pct_pobreza_total', 'pct_pobreza_extrema']], 
+                                on='inei', how='left')
 
-    # ---------------------------------------------------------
-    # C. Ingeniería 2: Cruce de Datos a Nivel Distrital
-    # ---------------------------------------------------------
-    # Unimos crimen con datos socioeconómicos usando 'inei' como llave
-    df_distrital = pd.merge(df_crimen_melt, 
-                            df_socio[['inei', 'region', 'superficie', 'pob_densidad_2020', 
-                                      'altitude', 'pct_pobreza_total', 'pct_pobreza_extrema']], 
-                            on='inei', how='left')
 
     # ---------------------------------------------------------
     # D. Ingeniería 3: AGREGACIÓN A NIVEL REGIONAL (Departamento)
