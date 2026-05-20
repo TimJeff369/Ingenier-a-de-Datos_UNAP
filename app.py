@@ -18,7 +18,7 @@ def cargar_datos_procesados():
     # A. Carga de Archivos Principales
     try:
         # Excel 1: Denuncias Distritales (Asegúrate que tenga columna 'inei')
-        df_crimen = pd.read_excel("datos.xlsx", engine='openpyxl')
+        df_crimen = pd.read_csv("datos.xlsx")
         df_crimen.fillna(0, inplace=True)
         df_crimen.rename(columns={'UBIGEO_HECHO': 'inei'}, inplace=True)
 
