@@ -14,8 +14,8 @@ st.markdown("Comparativa de incidentes y cálculo probabilístico en la Región 
 # --- 2. CARGA Y LIMPIEZA DE DATOS ---
 @st.cache_data
 def cargar_datos():
-    # Asegúrate de que tu archivo se llame datos.xlsx y esté en la misma carpeta
-    df = pd.read_excel("datos.xlsx")
+    # Asegúrate de que tu archivo se llame datos.csv y esté en la misma carpeta
+    df = pd.read_csv("datos.csv")
     # Llenamos valores vacíos con 0 para evitar errores matemáticos
     df.fillna(0, inplace=True)
     return df
@@ -23,7 +23,7 @@ def cargar_datos():
 try:
     df = cargar_datos()
 except FileNotFoundError:
-    st.error("🚨 Archivo no encontrado. Sube tu archivo Excel como 'datos.xlsx' a tu Codespace.")
+    st.error("🚨 Archivo no encontrado. Sube tu archivo CSV como 'datos.csv' a tu Codespace.")
     st.stop()
 
 # Transformar los datos: de columnas por año a filas (facilita las gráficas)
