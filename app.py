@@ -17,15 +17,13 @@ st.markdown("Análisis avanzado de patrones delictivos y vulnerabilidad socioeco
 def cargar_datos_procesados():
     # A. Carga de Archivos Principales
     try:
-# El parámetro 'on_bad_lines' saltará las filas que tengan errores
-        # 'sep' le dice que use la coma como separador (o usa ';' si tu Excel original era en español)
-        df_crimen = pd.read_csv("datos.csv", on_bad_lines='skip', sep=None, engine='python')
+        df_crimen = pd.read_csv("datos.csv", encoding='latin-1', on_bad_lines='skip', sep=None, engine='python')
         
         df_crimen.fillna(0, inplace=True)
         df_crimen.rename(columns={'UBIGEO_HECHO': 'inei'}, inplace=True)
 
-        # Para el de los ubigeos, si sigue dando guerra, hazle lo mismo:
-        df_socio = pd.read_csv("ubigeo_distrito.csv", on_bad_lines='skip', sep=None, engine='python')
+        # Hacemos lo mismo con el segundo archivo por seguridad
+        df_socio = pd.read_csv("ubigeo_distrito.csv", encoding='latin-1', on_bad_lines='skip', sep=None, engine='python')
         
         # Archivo GeoJSON: Polígonos de departamentos
         with open("peru_departamentos.geojson", encoding='utf-8') as f:
