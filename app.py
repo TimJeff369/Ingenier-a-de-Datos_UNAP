@@ -1,208 +1,105 @@
 import streamlit as st
 import pandas as pd
 import plotly.express as px
-import plotly.graph_objects as go
-from scipy.stats import poisson
-import numpy as np
-import json 
 
-# --- 1. CONFIGURACIÓN DE LA PÁGINA ---
-st.set_page_config(page_title="Dashboard Predictivo Puno/Juliaca", layout="wide")
-
+# --- CONFIGURACIÓN ---
+st.set_page_config(page_title="Dashboard Criminal Puno", layout="wide")
 st.title("📊 Sistema de Inteligencia Territorial Criminal")
-st.markdown("Análisis avanzado de patrones delictivos y vulnerabilidad socioeconómica.")
+st.markdown("Análisis de criminalidad simplificado y mapa de puntos calientes.")
 
-# --- 2. INGENIERÍA DE DATOS (INGESTA Y AGREGACIÓN REGIONAL) ---
-@st.cache_data
-def cargar_datos_procesados():
-    try:
-        # A. Carga de Archivos Principales
-        df_crimen = pd.read_csv("datos.csv", encoding='latin-1', on_bad_lines='skip', sep=None, engine='python')
-        df_socio = pd.read_csv("ubigeo_distrito.csv", encoding='latin-1', on_bad_lines='skip', sep=None, engine='python')
-        
-        with open("peru_departamentos.geojson", encoding='utf-8') as f:
-            geojson_peru = json.load(f)
-
-        # Limpiamos nombres de columnas (quita espacios en blanco accidentales)
-        df_crimen.columns = df_crimen.columns.str.strip()
-        df_socio.columns = df_socio.columns.str.strip()
-
-        # Renombramos el UBIGEO sea cual sea su nombre exacto
-        if 'UBIGEO_HECHO' in df_crimen.columns:
-            df_crimen.rename(columns={'UBIGEO_HECHO': 'inei'}, inplace=True)
-        elif 'UBIGEO' in df_crimen.columns:
-            df_crimen.rename(columns={'UBIGEO': 'inei'}, inplace=True)
-
-        # B. Ingeniería 1: Preparación de Datos de Crimen (Melt/Transformación)
-        if 'Año' not in df_crimen.columns:
-            columnas_fijas = [col for col in df_crimen.columns if not col.isdigit()]
-            columnas_anios = [col for col in df_crimen.columns if col.isdigit()]
-            
-            if len(columnas_anios) > 0:
-                df_crimen = pd.melt(df_crimen, id_vars=columnas_fijas, value_vars=columnas_anios, 
-                                    var_name='Año', value_name='Denuncias')
-            else:
-                df_crimen['Año'] = '2019'
-                if 'Denuncias' not in df_crimen.columns:
-                    df_crimen['Denuncias'] = 1
-
-        # C. Ingeniería 2: Cruce de Datos (Merge)
-        df_crimen['inei'] = df_crimen['inei'].astype(str)
-        df_socio['inei'] = df_socio['inei'].astype(str)
-        
-        df_distrital = pd.merge(df_crimen, 
-                                df_socio[['inei', 'region', 'superficie', 'pob_densidad_2020', 
-                                          'altitude', 'pct_pobreza_total', 'pct_pobreza_extrema']], 
-                                on='inei', how='left')
-        
-        # Limpiamos nulos SOLO en las columnas numéricas
-        df_distrital['Denuncias'] = pd.to_numeric(df_distrital['Denuncias'], errors='coerce').fillna(0)
-        
-        cols_numericas = ['superficie', 'pob_densidad_2020', 'altitude', 'pct_pobreza_total', 'pct_pobreza_extrema']
-        for col in cols_numericas:
-            if col in df_distrital.columns:
-                df_distrital[col] = pd.to_numeric(df_distrital[col], errors='coerce').fillna(0)
-                
-        df_distrital.fillna("Desconocido", inplace=True)
-
-        # D. Ingeniería 3: Agregación a Nivel Regional (Departamento)
-        df_regional = df_distrital.groupby(['DPTO_HECHO', 'Año']).agg({
-            'Denuncias': 'sum',
-            'superficie': 'sum',
-            'pob_densidad_2020': 'mean',
-            'altitude': 'mean',
-            'pct_pobreza_total': 'mean',
-            'pct_pobreza_extrema': 'mean'
-        }).reset_index()
-
-        df_regional_mapa = df_regional.groupby('DPTO_HECHO').agg({
-            'Denuncias': 'sum',
-            'superficie': 'first',
-            'pob_densidad_2020': 'first',
-            'altitude': 'first',
-            'pct_pobreza_total': 'first',
-            'pct_pobreza_extrema': 'first'
-        }).reset_index()
-
-        return df_distrital, df_regional, df_regional_mapa, geojson_peru
-        
-    except Exception as e:
-        st.error(f"🚨 Error fatal en la ingeniería de datos: {e}")
-        st.stop()
-
-# Cargamos los DataFrames procesados
-df_distrital, df_regional, df_regional_mapa, geojson_peru = cargar_datos_procesados()
-
-# --- 3. BARRA LATERAL (FILTROS EN CASCADA) ---
-st.sidebar.header("Filtros de Análisis Local")
-
-if not df_distrital.empty and 'DPTO_HECHO' in df_distrital.columns:
-    regiones = sorted(df_distrital['DPTO_HECHO'].unique().tolist())
-    region_sel = st.sidebar.selectbox("1. Selecciona una Región:", regiones, index=regiones.index('PUNO') if 'PUNO' in regiones else 0)
-
-    provincias = sorted(df_distrital[df_distrital['DPTO_HECHO'] == region_sel]['PROV_HECHO'].unique().tolist())
-    provincia_sel = st.sidebar.selectbox("2. Selecciona una Provincia:", provincias)
-
-    distritos = sorted(df_distrital[(df_distrital['DPTO_HECHO'] == region_sel) & (df_distrital['PROV_HECHO'] == provincia_sel)]['DIST_HECHO'].unique().tolist())
-    distrito_sel = st.sidebar.selectbox("3. Selecciona un Distrito:", distritos)
-else:
-    st.sidebar.warning("⚠️ No se detectaron departamentos. Verifica las columnas de tu CSV.")
-    region_sel = provincia_sel = distrito_sel = None
-
-# =========================================================================
-# --- 4. SECCIÓN 1: MAPA REGIONAL COMPLETO Y DINÁMICO ---
-# =========================================================================
-st.header("🗺️ Panorama Nacional de Criminalidad y Vulnerabilidad")
-st.write("Mapa interactivo que correlaciona el total de denuncias con indicadores socioeconómicos clave.")
-
-if not df_regional_mapa.empty:
-    fig_choropleth = px.choropleth(df_regional_mapa, 
-                                   geojson=geojson_peru, 
-                                   locations='DPTO_HECHO', 
-                                   featureidkey='properties.NOMBDEP', 
-                                   color='Denuncias', 
-                                   color_continuous_scale="Reds", 
-                                   range_color=(0, df_regional_mapa['Denuncias'].max() * 0.8), 
-                                   mapbox_style="carto-positron", 
-                                   zoom=4.2, 
-                                   center={"lat": -9.189967, "lon": -75.015152}, 
-                                   opacity=0.7,
-                                   labels={'Denuncias': 'Total Denuncias'},
-                                   title="Coropleta: Intensidad Delictiva por Departamento")
-
-    fig_choropleth.update_traces(
-        hovertemplate="<br>".join([
-            "<b>Región: %{location}</b>",
-            "Total Denuncias: %{color:,.0f}",
-            "Pobreza Total: %{customdata[0]:.2f} %",
-            "Pobreza Extrema: %{customdata[1]:.2f} %",
-            "Densidad Poblacional: %{customdata[2]:,.2f} hab/km²",
-            "Superficie: %{customdata[3]:,.2f} km²"
-        ]),
-        customdata=df_regional_mapa[['pct_pobreza_total', 'pct_pobreza_extrema', 
-                                     'pob_densidad_2020', 'superficie']]
-    )
-
-    fig_choropleth.update_layout(margin={"r":0,"t":40,"l":0,"b":0})
-    st.plotly_chart(fig_choropleth, use_container_width=True)
-
-# =========================================================================
-# --- 5. SECCIÓN 2: COMPARATIVA REGIONAL Y LOCAL ---
-# =========================================================================
-st.header(f"📈 Análisis Comparativo Regional y Local")
-
-col_izq, col_der = st.columns(2)
-
-with col_izq:
-    st.write("### Evolución en Provincias Clave (Puno/Juliaca/Azángaro)")
-    df_prov_clave = df_distrital[df_distrital['PROV_HECHO'].isin(['PUNO', 'SAN ROMAN', 'AZANGARO'])]
-    if not df_prov_clave.empty:
-        df_prov_evol = df_prov_clave.groupby(['PROV_HECHO', 'Año'])['Denuncias'].sum().reset_index()
-        fig_prov = px.line(df_prov_evol, x='Año', y='Denuncias', color='PROV_HECHO', markers=True,
-                           title="Tendencia en Provincias Principales",
-                           labels={'PROV_HECHO': 'Provincia'})
-        st.plotly_chart(fig_prov, use_container_width=True)
+try:
+    # --- 1. LECTURA DE DATOS SEGURA ---
+    # Leemos solo el archivo principal de crímenes (el que sabemos que funciona)
+    df_crimen = pd.read_csv("datos.csv", encoding='latin-1', on_bad_lines='skip', sep=None, engine='python')
+    df_crimen.columns = df_crimen.columns.str.strip() # Limpiamos espacios ocultos
+    
+    # Arreglamos las columnas si el año está distribuido en varias (Melt)
+    if 'Año' not in df_crimen.columns:
+        columnas_fijas = [col for col in df_crimen.columns if not col.isdigit()]
+        columnas_anios = [col for col in df_crimen.columns if col.isdigit()]
+        if len(columnas_anios) > 0:
+            df_crimen = pd.melt(df_crimen, id_vars=columnas_fijas, value_vars=columnas_anios, var_name='Año', value_name='Denuncias')
+    
+    # Aseguramos que las denuncias sean números
+    if 'Denuncias' in df_crimen.columns:
+        df_crimen['Denuncias'] = pd.to_numeric(df_crimen['Denuncias'], errors='coerce').fillna(0)
     else:
-        st.info("No se encontraron datos históricos para Puno, San Román o Azángaro.")
+        df_crimen['Denuncias'] = 1 # Por si acaso no existe la columna
 
-with col_der:
-    st.write(f"### Histórico Distrital: {distrito_sel}")
-    if distrito_sel:
-        df_dist_sel = df_distrital[(df_distrital['DPTO_HECHO'] == region_sel) & 
-                                   (df_distrital['PROV_HECHO'] == provincia_sel) & 
-                                   (df_distrital['DIST_HECHO'] == distrito_sel)]
-        
-        if not df_dist_sel.empty:
-            fig_dist = px.bar(df_dist_sel, x='Año', y='Denuncias', color='Año', text='Denuncias',
-                              title=f"Denuncias Registradas en {distrito_sel}")
-            st.plotly_chart(fig_dist, use_container_width=True)
+    st.success("✅ Archivo de datos procesado con éxito.")
 
-# =========================================================================
-# --- 6. SECCIÓN 3: MODELO MATEMÁTICO (POISSON) ---
-# =========================================================================
-st.header("🧮 Modelo Predictivo (Distribución de Poisson)")
-
-if distrito_sel and not df_dist_sel.empty:
-    lambda_param = df_dist_sel['Denuncias'].mean()
-    if lambda_param > 0:
-        st.info(f"**Tasa media histórica (λ) para {distrito_sel}:** {lambda_param:.2f} denuncias anuales.")
+    # --- 2. GRÁFICOS QUE YA FUNCIONABAN ---
+    if 'PROV_HECHO' in df_crimen.columns:
         col1, col2 = st.columns(2)
+        
+        # Agrupamos los datos por provincia
+        df_agrupado = df_crimen.groupby('PROV_HECHO')['Denuncias'].sum().reset_index()
+        df_top = df_agrupado.sort_values(by='Denuncias', ascending=False).head(10)
+
         with col1:
-            st.write("### Simulador de Probabilidad")
-            k_val = st.number_input("¿Qué cantidad de denuncias deseas predecir? (k):", min_value=0, value=int(lambda_param), step=1)
-            probabilidad = poisson.pmf(k_val, lambda_param) * 100 
-            st.metric(label=f"Probabilidad de registrar exactamente {k_val} denuncias:", value=f"{probabilidad:.2f} %")
+            st.subheader("📈 Top Provincias con más Denuncias")
+            fig_bar = px.bar(df_top, x='PROV_HECHO', y='Denuncias', color='Denuncias', 
+                             color_continuous_scale='Reds', title="Acumulado por Provincia")
+            st.plotly_chart(fig_bar, use_container_width=True)
+            
         with col2:
-            x_vals = np.arange(0, int(lambda_param * 2.5) + 5)
-            y_vals = poisson.pmf(x_vals, lambda_param)
-            fig_poisson = go.Figure(data=[go.Bar(x=x_vals, y=y_vals, marker_color='indigo')])
-            fig_poisson.update_layout(title="Curva de Distribución de Probabilidades", xaxis_title="Número de Denuncias (k)", yaxis_title="Probabilidad")
-            st.plotly_chart(fig_poisson, use_container_width=True)
+            st.subheader("📋 Vista de Datos Crudos")
+            st.dataframe(df_top, height=350)
+
+        # --- 3. EL MAPA SIMPLE Y NOVEDOSO (SIN ERRORES) ---
+        st.markdown("---")
+        st.subheader("🗺️ Cartografía Dinámica: Puntos Calientes (Hotspots)")
+        
+        # Diccionario "salvavidas" con coordenadas exactas de las provincias de Puno
+        # Esto evita que necesites el archivo GeoJSON o el cruce de datos que fallaba
+        coordenadas_puno = {
+            'PUNO': {'lat': -15.8402, 'lon': -70.0218},
+            'SAN ROMAN': {'lat': -15.4967, 'lon': -70.1333}, # Juliaca
+            'AZANGARO': {'lat': -14.9080, 'lon': -70.1956},
+            'CHUCUITO': {'lat': -16.2133, 'lon': -69.4594},
+            'EL COLLAO': {'lat': -16.0886, 'lon': -69.6583},
+            'MELGAR': {'lat': -14.8819, 'lon': -70.5897},
+            'CARABAYA': {'lat': -14.0667, 'lon': -70.4333},
+            'SANDIA': {'lat': -14.3167, 'lon': -69.4667},
+            'SAN ANTONIO DE PUTINA': {'lat': -14.9167, 'lon': -69.8667},
+            'YUNGUYO': {'lat': -16.2500, 'lon': -69.0833},
+            'HUANCANE': {'lat': -15.2000, 'lon': -69.7500},
+            'LAMPA': {'lat': -15.3500, 'lon': -70.3667},
+            'MOHO': {'lat': -15.3667, 'lon': -69.5000}
+        }
+        
+        # Convertimos el diccionario en un DataFrame temporal
+        df_coords = pd.DataFrame.from_dict(coordenadas_puno, orient='index').reset_index()
+        df_coords.columns = ['PROV_HECHO', 'lat', 'lon']
+        
+        # Unimos tus denuncias reales con nuestras coordenadas seguras
+        df_mapa = pd.merge(df_agrupado, df_coords, on='PROV_HECHO', how='inner')
+        
+        if not df_mapa.empty:
+            # Creamos un mapa de dispersión profesional (estilo oscuro)
+            fig_mapa = px.scatter_mapbox(
+                df_mapa, 
+                lat="lat", 
+                lon="lon", 
+                color="Denuncias",
+                size="Denuncias", # Las burbujas crecen si hay más crímenes
+                hover_name="PROV_HECHO", 
+                hover_data={"lat": False, "lon": False, "Denuncias": True},
+                color_continuous_scale=px.colors.sequential.YlOrRd,
+                size_max=50,
+                zoom=6.5, 
+                mapbox_style="carto-darkmatter", # Estilo elegante e "inteligencia"
+                title="Distribución Geográfica del Delito en la Región Puno"
+            )
+            fig_mapa.update_layout(margin={"r":0,"t":40,"l":0,"b":0})
+            st.plotly_chart(fig_mapa, use_container_width=True)
+            
+            st.info("💡 **Nota Novedosa:** Las burbujas (hotspots) indican la intensidad criminal. Un mayor tamaño y un color más rojo (como en San Román) señalan focos prioritarios para políticas de seguridad.")
+        else:
+            st.warning("No se encontraron provincias de Puno en los datos para graficar el mapa.")
+
     else:
-        st.warning(f"La tasa histórica para {distrito_sel} es 0, no se puede calcular Poisson.")
-else:
-    st.warning("No hay suficientes datos para calcular el modelo predictor.")
+        st.warning("El archivo no tiene una columna llamada 'PROV_HECHO' para agrupar los datos.")
 
-st.markdown("---")
-st.caption("Desarrollado para la monografía de Ingeniería - Universidad Nacional del Altiplano.")
-
+except Exception as e:
+    st.error(f"🚨 Ocurrió un error en el sistema: {e}")
