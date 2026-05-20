@@ -19,7 +19,7 @@ def cargar_datos():
     Carga de datos solucionando el UnicodeDecodeError mediante latin-1
     """
     # Leer el dataset, especificando la codificación correcta
-    df = pd.read_csv('datos.csv', encoding='latin-1', sep=',') 
+    df = pd.read_csv('datos.csv', encoding='latin-1', sep=';')
     # Nota: Si tu CSV usa punto y coma, cambia sep=',' por sep=';'
 
     # Seleccionar solo las columnas de interés
@@ -198,4 +198,3 @@ with tab3:
             st.pyplot(fig3)
         else:
             st.warning("No hay datos suficientes para generar la distribución (λ = 0).")
-            
