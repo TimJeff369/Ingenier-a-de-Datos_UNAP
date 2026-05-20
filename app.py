@@ -32,8 +32,6 @@ def cargar_datos_procesados():
             df_crimen.rename(columns={'UBIGEO_HECHO': 'inei'}, inplace=True)
         elif 'UBIGEO' in df_crimen.columns:
             df_crimen.rename(columns={'UBIGEO': 'inei'}, inplace=True)
-            
-        df_crimen.fillna(0, inplace=True)
 
         # B. Ingeniería 1: Preparación de Datos de Crimen (Melt/Transformación)
         # Si el archivo NO tiene la columna 'Año', asumimos que los años están en columnas (2017, 2018...)
@@ -52,7 +50,7 @@ def cargar_datos_procesados():
                     df_crimen['Denuncias'] = 1
 
         # C. Ingeniería 2: Cruce de Datos (Merge)
-        # Forzamos a texto para que no haya errores
+        # Forzamos a texto para que no haya errores de unión
         df_crimen['inei'] = df_crimen['inei'].astype(str)
         df_socio['inei'] = df_socio['inei'].astype(str)
         
@@ -61,9 +59,16 @@ def cargar_datos_procesados():
                                           'altitude', 'pct_pobreza_total', 'pct_pobreza_extrema']], 
                                 on='inei', how='left')
         
-        # Limpiamos nulos después del cruce
+        # SOLUCIÓN DEL ERROR: Limpiamos nulos SOLO en las columnas numéricas
         df_distrital['Denuncias'] = pd.to_numeric(df_distrital['Denuncias'], errors='coerce').fillna(0)
-        df_distrital.fillna(0, inplace=True)
+        
+        cols_numericas = ['superficie', 'pob_densidad_2020', 'altitude', 'pct_pobreza_total', 'pct_pobreza_extrema']
+        for col in cols_numericas:
+            if col in df_distrital.columns:
+                df_distrital[col] = pd.to_numeric(df_distrital[col], errors='coerce').fillna(0)
+                
+        # Para las columnas de texto que hayan quedado vacías
+        df_distrital.fillna("Desconocido", inplace=True)
 
         # D. Ingeniería 3: Agregación a Nivel Regional (Departamento)
         df_regional = df_distrital.groupby(['DPTO_HECHO', 'Año']).agg({
