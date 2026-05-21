@@ -5,12 +5,78 @@ import matplotlib.pyplot as plt
 import seaborn as sns
 from scipy.stats import poisson
 
+import sqlite3
+import hashlib
+
 # Configuración de la página (Experiencia de Usuario UX - Cap 2.5)
 st.set_page_config(page_title="Dashboard Delictivo - Región Puno", layout="wide")
 
 # Estilo profesional para gráficos
 plt.style.use('seaborn-v0_8-whitegrid')
 sns.set_palette("muted")
+
+
+
+
+# --- SISTEMA DE AUTENTICACIÓN Y BASE DE DATOS ---
+
+def inicializar_bd():
+    """Crea la tabla de usuarios si no existe"""
+    conn = sqlite3.connect('usuarios.db')
+    c = conn.cursor()
+    c.execute('''CREATE TABLE IF NOT EXISTS usuarios
+                 (email TEXT PRIMARY KEY, password TEXT)''')
+    conn.commit()
+    conn.close()
+
+def encriptar_password(password):
+    """Convierte la contraseña en un hash seguro (¡Para impresionar a la profesora!)"""
+    return hashlib.sha256(password.encode()).hexdigest()
+
+def registrar_usuario(email, password):
+    """Valida el correo y guarda el nuevo usuario en SQLite"""
+    if not email.endswith("@gmail.data.sience.edu.pe"):
+        return False, "El correo electrónico debe terminar obligatoriamente en @gmail.data.sience.edu.pe"
+    
+    try:
+        conn = sqlite3.connect('usuarios.db')
+        c = conn.cursor()
+        # Guardamos el email y la contraseña encriptada
+        c.execute("INSERT INTO usuarios (email, password) VALUES (?, ?)", (email, encriptar_password(password)))
+        conn.commit()
+        conn.close()
+        return True, "¡Registro exitoso! Ahora puedes iniciar sesión en la pestaña de al lado."
+    except sqlite3.IntegrityError:
+        return False, "Este correo ya se encuentra registrado en el sistema."
+
+def verificar_login(email, password):
+    """Comprueba si el usuario y la contraseña coinciden en la base de datos"""
+    conn = sqlite3.connect('usuarios.db')
+    c = conn.cursor()
+    c.execute("SELECT password FROM usuarios WHERE email=?", (email,))
+    resultado = c.fetchone()
+    conn.close()
+    
+    # Comparamos el hash guardado con el hash de la contraseña ingresada
+    if resultado and resultado[0] == encriptar_password(password):
+        return True
+    return False
+
+# Inicializar la base de datos al arrancar la app
+inicializar_bd()
+
+# Variable de estado (Session State) para saber si el usuario ya entró
+if 'autenticado' not in st.session_state:
+    st.session_state['autenticado'] = False
+
+
+
+
+
+
+
+
+
 
 @st.cache_data
 def cargar_datos():
@@ -105,11 +171,63 @@ if df_resto.empty:
 else:
     df_melt_resto = df_melt_completo[df_melt_completo.set_index(['DPTO_HECHO', 'PROV_HECHO', 'DIST_HECHO']).index.isin(df_resto.set_index(['DPTO_HECHO', 'PROV_HECHO', 'DIST_HECHO']).index)]
 
-# --- INICIO DE LA INTERFAZ PRINCIPAL ---
+
+# --- CONTROL DE ACCESO (LOGIN / REGISTRO) ---
+if not st.session_state['autenticado']:
+    st.title("🔒 Portal de Acceso Restringido")
+    st.markdown("Sistema de Análisis de Riesgo Delictivo - **Acceso solo para personal autorizado**.")
+    
+    # Crear pestañas para el Login y Registro
+    tab_login, tab_registro = st.tabs(["🔑 Iniciar Sesión", "📝 Registrar Nuevo Usuario"])
+    
+    with tab_login:
+        st.subheader("Ingreso al Dashboard")
+        login_email = st.text_input("Correo Institucional", key="login_email")
+        login_password = st.text_input("Contraseña", type="password", key="login_password")
+        
+        if st.button("Ingresar", type="primary"):
+            if verificar_login(login_email, login_password):
+                st.session_state['autenticado'] = True
+                st.rerun() # Recarga la página para mostrar el dashboard
+            else:
+                st.error("Credenciales incorrectas. Verifica tu correo y contraseña.")
+                
+    with tab_registro:
+        st.subheader("Solicitar Acceso")
+        st.info("Solo se admiten correos con el dominio: @gmail.data.sience.edu.pe")
+        reg_email = st.text_input("Nuevo Correo Institucional", key="reg_email")
+        reg_password = st.text_input("Nueva Contraseña", type="password", key="reg_password")
+        
+        if st.button("Registrar Usuario"):
+            if reg_email and reg_password:
+                exito, mensaje = registrar_usuario(reg_email, reg_password)
+                if exito:
+                    st.success(mensaje)
+                else:
+                    st.error(mensaje)
+            else:
+                st.warning("Por favor, completa ambos campos para registrarte.")
+                
+    # st.stop() detiene la ejecución aquí si no está autenticado, ocultando el resto del código
+    st.stop() 
+
+# Botón para cerrar sesión (Aparecerá en la barra lateral debajo de los filtros)
+st.sidebar.markdown("---")
+if st.sidebar.button("Cerrar Sesión"):
+    st.session_state['autenticado'] = False
+    st.rerun()
+
+# =====================================================================
+# --- A PARTIR DE AQUÍ VA TU INTERFAZ PRINCIPAL DEL DASHBOARD ---
+# =====================================================================
+
 st.title("Sistema de Análisis y Predicción de Riesgo Delictivo")
 st.markdown("Esta plataforma visualiza la incidencia delictiva y aplica el **Modelo Probabilístico de Poisson** para evaluar el riesgo, estructurada como resultado práctico de la monografía de investigación.")
 
 tab1, tab2, tab3 = st.tabs(["Análisis de la Selección", "Comparativa con el Entorno (Los Demás)", "Modelo Probabilístico (Poisson)"])
+
+
+
 
 # ---------------------------------------------------------
 # PESTAÑA 1: DATOS DE LA ZONA SELECCIONADA
