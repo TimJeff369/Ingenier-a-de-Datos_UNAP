@@ -78,11 +78,11 @@ else:
 lista_distritos = ['TODOS'] + sorted(df_prov['DIST_HECHO'].dropna().astype(str).unique().tolist())
 dist_sel = st.sidebar.selectbox("3. Distrito (DIST_HECHO)", lista_distritos)
 
-
 # --- LÓGICA DE SEPARACIÓN (SELECCIÓN vs LOS DEMÁS) ---
 if prov_sel == 'TODAS':
     df_seleccion = df_dpto
-    df_resto = pd.DataFrame() # No hay "demás" si se selecciona toda la región
+    # FIX: Se crea un DataFrame vacío, pero heredando las columnas para que Pandas no falle
+    df_resto = pd.DataFrame(columns=df_completo.columns) 
     titulo_sel = f"Región: {dpto_sel}"
     titulo_resto = "No aplica (Toda la región seleccionada)"
 elif dist_sel == 'TODOS':
@@ -98,8 +98,12 @@ else:
 
 # Data derretida (Melt) correspondiente a la selección
 df_melt_seleccion = df_melt_completo[df_melt_completo.set_index(['DPTO_HECHO', 'PROV_HECHO', 'DIST_HECHO']).index.isin(df_seleccion.set_index(['DPTO_HECHO', 'PROV_HECHO', 'DIST_HECHO']).index)]
-df_melt_resto = df_melt_completo[df_melt_completo.set_index(['DPTO_HECHO', 'PROV_HECHO', 'DIST_HECHO']).index.isin(df_resto.set_index(['DPTO_HECHO', 'PROV_HECHO', 'DIST_HECHO']).index)]
 
+# FIX: Comprobación de seguridad. Si no hay "resto", no intentamos hacer el set_index
+if df_resto.empty:
+    df_melt_resto = pd.DataFrame(columns=df_melt_completo.columns)
+else:
+    df_melt_resto = df_melt_completo[df_melt_completo.set_index(['DPTO_HECHO', 'PROV_HECHO', 'DIST_HECHO']).index.isin(df_resto.set_index(['DPTO_HECHO', 'PROV_HECHO', 'DIST_HECHO']).index)]
 
 # --- INICIO DE LA INTERFAZ PRINCIPAL ---
 st.title("Sistema de Análisis y Predicción de Riesgo Delictivo")
@@ -199,4 +203,3 @@ with tab3:
         st.warning("No hay suficientes datos históricos en la zona seleccionada para calcular la distribución de Poisson (λ = 0).")
 
 
-        
