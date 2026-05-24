@@ -389,7 +389,6 @@ with tab3:
 
 
 
-
 # ---------------------------------------------------------
 # PESTAÑA 4: MAPA COROPLÉTICO NACIONAL (CON NOMBRES ESTÁTICOS Y HOVER ESTILIZADO)
 # ---------------------------------------------------------
