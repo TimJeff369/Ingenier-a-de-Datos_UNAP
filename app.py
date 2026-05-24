@@ -335,42 +335,70 @@ with tab3:
 
 
 
+
+
+
 # ---------------------------------------------------------
-# PESTAÑA 4: MAPA COROPLÉTICO NACIONAL
+# PESTAÑA 4: MAPA COROPLÉTICO NACIONAL (SEMÁFORO DE RIESGO)
 # ---------------------------------------------------------
 with tab4:
-    st.header("Visualización Cartográfica Nacional")
-    st.markdown("Este mapa representa la intensidad delictiva acumulada por departamento.")
+    st.header("Visualización Cartográfica Nacional - Nivel de Riesgo")
+    st.markdown("Este mapa clasifica el riesgo delictivo en tres niveles usando segmentación estadística.")
 
     try:
         # 1. Cargar el GeoJSON
         with open('peru_departamentos.geojson', 'r', encoding='utf-8') as f:
             geojson_peru = json.load(f)
 
-        # 2. Preparar datos para el mapa (Agrupamos el total nacional por departamento)
+        # 2. Preparar datos para el mapa
         df_nacional = df_completo.groupby('DPTO_HECHO', as_index=False)['Total_Denuncias'].sum()
-        # Limpieza de nombres para asegurar el cruce con el mapa
         df_nacional['DPTO_HECHO'] = df_nacional['DPTO_HECHO'].str.strip().str.upper()
+
+        # --- INICIO DEL MOTOR DE CLASIFICACIÓN (SEMÁFORO) ---
+        # Calculamos los límites estadísticos (33% y 66% de los datos)
+        limite_bajo = df_nacional['Total_Denuncias'].quantile(0.33)
+        limite_alto = df_nacional['Total_Denuncias'].quantile(0.66)
+
+        def clasificar_riesgo(total):
+            if total <= limite_bajo:
+                return 'No Peligroso'
+            elif total <= limite_alto:
+                return 'Poco Peligroso'
+            else:
+                return 'Muy Peligroso'
+
+        # Aplicamos la regla lógica creando una nueva columna
+        df_nacional['Nivel de Riesgo'] = df_nacional['Total_Denuncias'].apply(clasificar_riesgo)
+        # --- FIN DEL MOTOR DE CLASIFICACIÓN ---
 
         # 3. Crear el mapa interactivo
         fig_mapa = px.choropleth_mapbox(
             df_nacional,
             geojson=geojson_peru,
             locations='DPTO_HECHO',
-            featureidkey='properties.NOMBDEP',  # Esta es la llave estándar en GeoJSON de Perú
-            color='Total_Denuncias',
-            color_continuous_scale="YlOrRd",    # Amarillo -> Naranja -> Rojo
+            featureidkey='properties.NOMBDEP',  
+            color='Nivel de Riesgo',            # AHORA COLOREAMOS POR LA CATEGORÍA
+            color_discrete_map={                # DEFINIMOS LOS COLORES EXACTOS
+                'No Peligroso': '#2ca02c',      # Verde
+                'Poco Peligroso': '#ff7f0e',    # Naranja
+                'Muy Peligroso': '#d62728'      # Rojo
+            },
             mapbox_style="carto-positron",
             zoom=4.2,
             center={"lat": -9.19, "lon": -75.01},
-            opacity=0.6,
-            hover_name='DPTO_HECHO',
-            labels={'Total_Denuncias': 'Denuncias Totales'}
+            opacity=0.7,
+            hover_name='DPTO_HECHO',            # EL NOMBRE DE LA REGIÓN RESALTA AL PASAR EL MOUSE
+            hover_data={
+                'DPTO_HECHO': False,            # Ocultamos el nombre duplicado abajo
+                'Nivel de Riesgo': True,        # Mostramos la categoría
+                'Total_Denuncias': True         # Mostramos el número exacto
+            }
         )
 
         fig_mapa.update_layout(
             margin={"r":0,"t":30,"l":0,"b":0},
-            height=600
+            height=600,
+            legend_title_text='Categoría de Riesgo' # Título de la leyenda
         )
 
         # 4. Mostrar el mapa
