@@ -385,15 +385,21 @@ with tab3:
 
 
 
+
+
+
+
+
 # ---------------------------------------------------------
-# PESTAÑA 4: MAPA COROPLÉTICO NACIONAL (SEMÁFORO DE RIESGO ESTILIZADO)
+# PESTAÑA 4: MAPA COROPLÉTICO NACIONAL (CON NOMBRES ESTÁTICOS Y HOVER ESTILIZADO)
 # ---------------------------------------------------------
 with tab4:
     st.header("Visualización Cartográfica Nacional - Nivel de Riesgo")
     st.markdown("Este mapa clasifica el riesgo delictivo en tres niveles usando segmentación estadística de percentiles.")
 
-    # 0. Importar la fuente Rajdhani específicamente para los elementos web del mapa
-    st.markdown('<link href="https://fonts.googleapis.com/css2?family=Rajdhani:wght@500;600;700&display=swap" rel="stylesheet">', unsafe_allow_html=True)
+    # 0. Importar librerías necesarias y la fuente Rajdhani
+    import plotly.graph_objects as go
+    st.markdown('<link href="https://fonts.googleapis.com/css2?family=Rajdhani:wght@600;700&display=swap" rel="stylesheet">', unsafe_allow_html=True)
 
     try:
         # 1. Cargar el GeoJSON
@@ -418,7 +424,7 @@ with tab4:
 
         df_nacional['Nivel de Riesgo'] = df_nacional['Total_Denuncias'].apply(clasificar_riesgo)
 
-        # 4. Crear el Mapa Coroplético Optimizado
+        # 4. Crear el Mapa Coroplético Base
         fig_mapa = px.choropleth_mapbox(
             df_nacional,
             geojson=geojson_peru,
@@ -434,7 +440,7 @@ with tab4:
             zoom=4.5,
             center={"lat": -9.19, "lon": -75.01},
             opacity=0.75,                       
-            hover_name='DPTO_HECHO',            # Nombre grande en la cabecera del cuadro
+            hover_name='DPTO_HECHO',            
             hover_data={
                 'DPTO_HECHO': False,            
                 'Nivel de Riesgo': True,        
@@ -442,30 +448,55 @@ with tab4:
             }
         )
 
-        # ACTUALIZACIÓN UX: Bordes marcados para identificar mejor los departamentos
-        fig_mapa.update_traces(marker_line_width=1.5, marker_line_color='black')
+        # 5. CAPA DE TEXTO ESTÁTICO: Diccionario de coordenadas centrales por departamento
+        centroides = {
+            'DPTO_HECHO': ['AMAZONAS', 'ANCASH', 'APURIMAC', 'AREQUIPA', 'AYACUCHO', 'CAJAMARCA', 'CALLAO', 'CUSCO', 'HUANCAVELICA', 'HUANUCO', 'ICA', 'JUNIN', 'LA LIBERTAD', 'LAMBAYEQUE', 'LIMA', 'LORETO', 'MADRE DE DIOS', 'MOQUEGUA', 'PASCO', 'PIURA', 'PUNO', 'SAN MARTIN', 'TACNA', 'TUMBES', 'UCAYALI'],
+            'lat': [-6.2, -9.5, -14.0, -16.2, -14.2, -6.6, -12.05, -13.5, -12.8, -9.9, -14.1, -11.4, -8.0, -6.7, -12.0, -4.5, -12.0, -16.8, -10.5, -5.2, -15.0, -7.0, -17.5, -3.8, -9.0],
+            'lon': [-77.8, -77.5, -72.9, -71.9, -74.1, -78.6, -77.15, -71.9, -75.0, -75.6, -75.6, -74.9, -78.5, -79.9, -76.6, -74.5, -70.5, -71.1, -75.0, -80.5, -70.0, -76.7, -70.3, -80.6, -73.0]
+        }
+        df_centros = pd.DataFrame(centroides)
+        
+        # Formatear nombres en negrita para máxima claridad en pantalla
+        nombres_negrita = [f"<b>{name}</b>" for name in df_centros['DPTO_HECHO']]
 
-        # --- PALETA DE COLORES PERSONALIZADA (Identidad Visual de la Cabecera) ---
-        color_fondo_cuadro = "#0d1b3e"   # Azul oscuro profundo (Estilo CodeSpace)
-        color_letras_oro = "#ffd700"     # Dorado brillante (Alta legibilidad)
-        color_borde_cian = "#1ed7fe"     # Cian Cyberpunk/Tecnológico para los marcos
+        # Inyectar la capa de texto sobre el mapa coroplético
+        fig_mapa.add_trace(go.Scattermapbox(
+            lat=df_centros['lat'],
+            lon=df_centros['lon'],
+            mode='text',
+            text=nombres_negrita,
+            textposition='center',
+            showlegend=False,
+            hoverinfo='skip', # Evita que el texto estático interfiera con el cuadro del mouse
+            textfont=dict(
+                family="Rajdhani, sans-serif",
+                size=12,
+                color="#0a0e27" # Color azul oscuro de alta densidad para resaltar sobre los polígonos
+            )
+        ))
+
+        # 6. Configuración de diseño y estilos de la interfaz (HoverBox)
+        color_fondo_cuadro = "#0d1b3e"   
+        color_letras_oro = "#ffd700"     
+        color_borde_cian = "#1ed7fe"     
+
+        fig_mapa.update_traces(marker_line_width=1.5, marker_line_color='black', selector=dict(type='choroplethmapbox'))
 
         fig_mapa.update_layout(
             margin={"r":0,"t":30,"l":0,"b":0},
             height=650,
             legend_title_text='Categoría de Riesgo',
             
-            # NUEVO DISEÑO DEL CUADRO INFORMATIVO AL PASAR EL MOUSE
             hoverlabel=dict(
-                bgcolor=color_fondo_cuadro,          # Cambia el cuadro blanco por azul oscuro
-                font_size=16,                        # Incrementa el tamaño para que se note
-                font_family="Rajdhani, sans-serif",  # Aplica la tipografía solicitada
-                font_color=color_letras_oro,         # Pinta las letras de dorado brillante
-                bordercolor=color_borde_cian,        # Añade el marco decorativo cian
+                bgcolor=color_fondo_cuadro,          
+                font_size=16,                        
+                font_family="Rajdhani, sans-serif",  
+                font_color=color_letras_oro,         
+                bordercolor=color_borde_cian,        
             )
         )
 
-        # 5. Mostrar el mapa en la plataforma
+        # 7. Desplegar gráfico
         st.plotly_chart(fig_mapa, use_container_width=True)
 
     except Exception as e:
