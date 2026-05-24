@@ -343,19 +343,18 @@ with tab3:
 # ---------------------------------------------------------
 with tab4:
     st.header("Visualización Cartográfica Nacional - Nivel de Riesgo")
-    st.markdown("Este mapa clasifica el riesgo delictivo en tres niveles usando segmentación estadística.")
+    st.markdown("Este mapa clasifica el riesgo delictivo en tres niveles usando segmentación estadística de percentiles.")
 
     try:
         # 1. Cargar el GeoJSON
         with open('peru_departamentos.geojson', 'r', encoding='utf-8') as f:
             geojson_peru = json.load(f)
 
-        # 2. Preparar datos para el mapa
+        # 2. Preparar datos y sumar los totales nacionales
         df_nacional = df_completo.groupby('DPTO_HECHO', as_index=False)['Total_Denuncias'].sum()
         df_nacional['DPTO_HECHO'] = df_nacional['DPTO_HECHO'].str.strip().str.upper()
 
-        # --- INICIO DEL MOTOR DE CLASIFICACIÓN (SEMÁFORO) ---
-        # Calculamos los límites estadísticos (33% y 66% de los datos)
+        # 3. Motor de Clasificación Estadística (Tercios)
         limite_bajo = df_nacional['Total_Denuncias'].quantile(0.33)
         limite_alto = df_nacional['Total_Denuncias'].quantile(0.66)
 
@@ -367,42 +366,49 @@ with tab4:
             else:
                 return 'Muy Peligroso'
 
-        # Aplicamos la regla lógica creando una nueva columna
         df_nacional['Nivel de Riesgo'] = df_nacional['Total_Denuncias'].apply(clasificar_riesgo)
-        # --- FIN DEL MOTOR DE CLASIFICACIÓN ---
 
-        # 3. Crear el mapa interactivo
+        # 4. Crear el Mapa Coroplético Optimizado
         fig_mapa = px.choropleth_mapbox(
             df_nacional,
             geojson=geojson_peru,
             locations='DPTO_HECHO',
             featureidkey='properties.NOMBDEP',  
-            color='Nivel de Riesgo',            # AHORA COLOREAMOS POR LA CATEGORÍA
-            color_discrete_map={                # DEFINIMOS LOS COLORES EXACTOS
+            color='Nivel de Riesgo',            
+            color_discrete_map={                
                 'No Peligroso': '#2ca02c',      # Verde
                 'Poco Peligroso': '#ff7f0e',    # Naranja
                 'Muy Peligroso': '#d62728'      # Rojo
             },
             mapbox_style="carto-positron",
-            zoom=4.2,
+            zoom=4.5,
             center={"lat": -9.19, "lon": -75.01},
-            opacity=0.7,
-            hover_name='DPTO_HECHO',            # EL NOMBRE DE LA REGIÓN RESALTA AL PASAR EL MOUSE
+            opacity=0.75,                       # Un poco más sólido para resaltar
+            hover_name='DPTO_HECHO',            # Nombre grande en la etiqueta
             hover_data={
-                'DPTO_HECHO': False,            # Ocultamos el nombre duplicado abajo
-                'Nivel de Riesgo': True,        # Mostramos la categoría
-                'Total_Denuncias': True         # Mostramos el número exacto
+                'DPTO_HECHO': False,            
+                'Nivel de Riesgo': True,        
+                'Total_Denuncias': True         
             }
         )
 
+        # ACTUALIZACIÓN UX: Bordes marcados para identificar mejor los departamentos
+        fig_mapa.update_traces(marker_line_width=1.5, marker_line_color='black')
+
         fig_mapa.update_layout(
             margin={"r":0,"t":30,"l":0,"b":0},
-            height=600,
-            legend_title_text='Categoría de Riesgo' # Título de la leyenda
+            height=650,
+            legend_title_text='Categoría de Riesgo',
+            # Configuramos la etiqueta emergente para que sea más clara
+            hoverlabel=dict(
+                bgcolor="white",
+                font_size=14,
+                font_family="Arial"
+            )
         )
 
-        # 4. Mostrar el mapa
+        # 5. Mostrar el mapa en la plataforma
         st.plotly_chart(fig_mapa, use_container_width=True)
 
     except Exception as e:
-        st.error(f"No se pudo cargar el mapa. Verifica que 'peru_departamentos.geojson' esté en la carpeta. Error: {e}")
+        st.error(f"No se pudo cargar el mapa. Verifica tu archivo GeoJSON. Error técnico: {e}")
