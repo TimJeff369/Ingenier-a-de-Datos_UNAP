@@ -15,8 +15,56 @@ import hashlib
 st.set_page_config(page_title="Dashboard Delictivo - Región Puno", layout="wide")
 
 # Estilo profesional para gráficos
-plt.style.use('seaborn-v0_8-whitegrid')
 sns.set_palette("muted")
+
+
+
+# =====================================================================
+# --- INYECCIÓN DE ESTILO VISUAL (Para impresionar al jurado) ---
+# Se extrae la identidad visual de la imagen de cabecera proporcionada:
+# - Fondo: Gradiente Azul medianoche a Navy
+# - Texto Primario: Dorado brillante
+# - Tipografía: Rajdhani (estilo tecnológico)
+# - Acentos: Cian/Teal claro
+# =====================================================================
+
+# 1. Cargar la fuente Rajdhani desde Google Fonts
+st.markdown('<link href="https://fonts.googleapis.com/css2?family=Rajdhani:wght@500;600;700&display=swap" rel="stylesheet">', unsafe_allow_html=True)
+
+# 2. Aplicar CSS global para la app
+st.markdown("""
+    <style>
+        /* Tipografía y fondo para toda la página */
+        [data-testid="stAppViewContainer"] {
+            background: linear-gradient(135deg, #0a0e27 0%, #172a5a 100%);
+            color: #ffd700; /* Texto dorado por defecto */
+            font-family: 'Rajdhani', sans-serif;
+        }
+        
+        /* Asegurar que los títulos sean dorados y con la fuente */
+        .stMarkdown h1, .stMarkdown h2, .stMarkdown h3, .stMarkdown h4 {
+            color: #ffd700 !important;
+            font-family: 'Rajdhani', sans-serif !important;
+            text-shadow: 0px 0px 5px rgba(255, 215, 0, 0.3); /* Un sutil brillo dorado */
+        }
+        
+        /* Darle un tono más acorde al "Sidebar" (barra lateral) */
+        [data-testid="stSidebar"] {
+            background-color: rgba(10, 14, 39, 0.8) !important;
+            border-right: 1px solid #1ed7fe; /* Un borde cian claro */
+        }
+        [data-testid="stSidebar"] p, [data-testid="stSidebar"] label {
+            color: #1ed7fe !important; /* Texto de etiquetas en cian */
+        }
+
+        /* Ocultar el header superior por defecto para un look más "full app" */
+        [data-testid="stHeader"] {
+            background-color: rgba(0,0,0,0);
+        }
+    </style>
+""", unsafe_allow_html=True)
+
+
 
 
 
@@ -337,13 +385,15 @@ with tab3:
 
 
 
-
 # ---------------------------------------------------------
-# PESTAÑA 4: MAPA COROPLÉTICO NACIONAL (SEMÁFORO DE RIESGO)
+# PESTAÑA 4: MAPA COROPLÉTICO NACIONAL (SEMÁFORO DE RIESGO ESTILIZADO)
 # ---------------------------------------------------------
 with tab4:
     st.header("Visualización Cartográfica Nacional - Nivel de Riesgo")
     st.markdown("Este mapa clasifica el riesgo delictivo en tres niveles usando segmentación estadística de percentiles.")
+
+    # 0. Importar la fuente Rajdhani específicamente para los elementos web del mapa
+    st.markdown('<link href="https://fonts.googleapis.com/css2?family=Rajdhani:wght@500;600;700&display=swap" rel="stylesheet">', unsafe_allow_html=True)
 
     try:
         # 1. Cargar el GeoJSON
@@ -383,8 +433,8 @@ with tab4:
             mapbox_style="carto-positron",
             zoom=4.5,
             center={"lat": -9.19, "lon": -75.01},
-            opacity=0.75,                       # Un poco más sólido para resaltar
-            hover_name='DPTO_HECHO',            # Nombre grande en la etiqueta
+            opacity=0.75,                       
+            hover_name='DPTO_HECHO',            # Nombre grande en la cabecera del cuadro
             hover_data={
                 'DPTO_HECHO': False,            
                 'Nivel de Riesgo': True,        
@@ -395,15 +445,23 @@ with tab4:
         # ACTUALIZACIÓN UX: Bordes marcados para identificar mejor los departamentos
         fig_mapa.update_traces(marker_line_width=1.5, marker_line_color='black')
 
+        # --- PALETA DE COLORES PERSONALIZADA (Identidad Visual de la Cabecera) ---
+        color_fondo_cuadro = "#0d1b3e"   # Azul oscuro profundo (Estilo CodeSpace)
+        color_letras_oro = "#ffd700"     # Dorado brillante (Alta legibilidad)
+        color_borde_cian = "#1ed7fe"     # Cian Cyberpunk/Tecnológico para los marcos
+
         fig_mapa.update_layout(
             margin={"r":0,"t":30,"l":0,"b":0},
             height=650,
             legend_title_text='Categoría de Riesgo',
-            # Configuramos la etiqueta emergente para que sea más clara
+            
+            # NUEVO DISEÑO DEL CUADRO INFORMATIVO AL PASAR EL MOUSE
             hoverlabel=dict(
-                bgcolor="white",
-                font_size=14,
-                font_family="Arial"
+                bgcolor=color_fondo_cuadro,          # Cambia el cuadro blanco por azul oscuro
+                font_size=16,                        # Incrementa el tamaño para que se note
+                font_family="Rajdhani, sans-serif",  # Aplica la tipografía solicitada
+                font_color=color_letras_oro,         # Pinta las letras de dorado brillante
+                bordercolor=color_borde_cian,        # Añade el marco decorativo cian
             )
         )
 
