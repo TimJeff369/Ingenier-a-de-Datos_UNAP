@@ -5,6 +5,9 @@ import matplotlib.pyplot as plt
 import seaborn as sns
 from scipy.stats import poisson
 
+import plotly.express as px
+import json
+
 import sqlite3
 import hashlib
 
@@ -233,8 +236,7 @@ if st.sidebar.button("Cerrar Sesión"):
 st.title("Sistema de Análisis y Predicción de Riesgo Delictivo")
 st.markdown("Esta plataforma visualiza la incidencia delictiva y aplica el **Modelo Probabilístico de Poisson** para evaluar el riesgo, estructurada como resultado práctico de la monografía de investigación.")
 
-tab1, tab2, tab3 = st.tabs(["Análisis de la Selección", "Comparativa con el Entorno (Los Demás)", "Modelo Probabilístico (Poisson)"])
-
+tab1, tab2, tab3, tab4 = st.tabs(["Análisis de la Selección", "Comparativa con el Entorno (Los Demás)", "Modelo Probabilístico (Poisson)", "📍 Mapa de Riesgo Nacional"])
 
 
 
@@ -330,3 +332,49 @@ with tab3:
         st.warning("No hay suficientes datos históricos en la zona seleccionada para calcular la distribución de Poisson (λ = 0).")
 
 
+
+
+
+# ---------------------------------------------------------
+# PESTAÑA 4: MAPA COROPLÉTICO NACIONAL
+# ---------------------------------------------------------
+with tab4:
+    st.header("Visualización Cartográfica Nacional")
+    st.markdown("Este mapa representa la intensidad delictiva acumulada por departamento.")
+
+    try:
+        # 1. Cargar el GeoJSON
+        with open('peru_departamentos.geojson', 'r', encoding='utf-8') as f:
+            geojson_peru = json.load(f)
+
+        # 2. Preparar datos para el mapa (Agrupamos el total nacional por departamento)
+        df_nacional = df_completo.groupby('DPTO_HECHO', as_index=False)['Total_Denuncias'].sum()
+        # Limpieza de nombres para asegurar el cruce con el mapa
+        df_nacional['DPTO_HECHO'] = df_nacional['DPTO_HECHO'].str.strip().str.upper()
+
+        # 3. Crear el mapa interactivo
+        fig_mapa = px.choropleth_mapbox(
+            df_nacional,
+            geojson=geojson_peru,
+            locations='DPTO_HECHO',
+            featureidkey='properties.NOMBDEP',  # Esta es la llave estándar en GeoJSON de Perú
+            color='Total_Denuncias',
+            color_continuous_scale="YlOrRd",    # Amarillo -> Naranja -> Rojo
+            mapbox_style="carto-positron",
+            zoom=4.2,
+            center={"lat": -9.19, "lon": -75.01},
+            opacity=0.6,
+            hover_name='DPTO_HECHO',
+            labels={'Total_Denuncias': 'Denuncias Totales'}
+        )
+
+        fig_mapa.update_layout(
+            margin={"r":0,"t":30,"l":0,"b":0},
+            height=600
+        )
+
+        # 4. Mostrar el mapa
+        st.plotly_chart(fig_mapa, use_container_width=True)
+
+    except Exception as e:
+        st.error(f"No se pudo cargar el mapa. Verifica que 'peru_departamentos.geojson' esté en la carpeta. Error: {e}")
