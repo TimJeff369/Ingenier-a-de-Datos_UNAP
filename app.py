@@ -11,6 +11,7 @@ import json
 import sqlite3
 import hashlib
 
+
 # Configuración de la página (Experiencia de Usuario UX - Cap 2.5)
 st.set_page_config(page_title="Dashboard Delictivo - Región Puno", layout="wide")
 
