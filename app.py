@@ -20,8 +20,10 @@ sns.set_palette("muted")
 
 
 
+
+
 # =====================================================================
-# --- INYECCIÓN DE ESTILO VISUAL (Para impresionar al jurado) ---
+# --- INYECCIÓN DE ESTILO VISUAL ---
 # Se extrae la identidad visual de la imagen de cabecera proporcionada:
 # - Fondo: Gradiente Azul medianoche a Navy
 # - Texto Primario: Dorado brillante
@@ -126,10 +128,6 @@ if 'autenticado' not in st.session_state:
 
 
 
-
-
-
-
 @st.cache_data
 def cargar_datos():
     """
@@ -167,16 +165,15 @@ def cargar_datos():
 
 
 
-
-
-
-
 # Carga de datos inicial
 try:
     df_completo, df_melt_completo = cargar_datos()
 except Exception as e:
     st.error(f"Error al cargar el archivo 'datos.csv'. Detalle técnico: {e}")
     st.stop()
+
+
+
 
 
 # --- BARRA LATERAL (SIDEBAR) JERÁRQUICA ---
@@ -204,6 +201,9 @@ else:
 # 3. Filtro Distrito
 lista_distritos = ['TODOS'] + sorted(df_prov['DIST_HECHO'].dropna().astype(str).unique().tolist())
 dist_sel = st.sidebar.selectbox("3. Distrito (DIST_HECHO)", lista_distritos)
+
+
+
 
 # --- LÓGICA DE SEPARACIÓN (SELECCIÓN vs LOS DEMÁS) ---
 if prov_sel == 'TODAS':
@@ -278,14 +278,24 @@ if st.sidebar.button("Cerrar Sesión"):
     st.session_state['autenticado'] = False
     st.rerun()
 
+
+
+
+
 # =====================================================================
-# --- A PARTIR DE AQUÍ VA TU INTERFAZ PRINCIPAL DEL DASHBOARD ---
+# --- INTERFAZ PRINCIPAL DEL DASHBOARD ---
 # =====================================================================
 
 st.title("Sistema de Análisis y Predicción de Riesgo Delictivo")
 st.markdown("Esta plataforma visualiza la incidencia delictiva y aplica el **Modelo Probabilístico de Poisson** para evaluar el riesgo, estructurada como resultado práctico de la monografía de investigación.")
 
 tab1, tab2, tab3, tab4 = st.tabs(["Análisis de la Selección", "Comparativa con el Entorno (Los Demás)", "Modelo Probabilístico (Poisson)", "📍 Mapa de Riesgo Nacional"])
+
+
+
+
+
+
 
 
 
@@ -313,6 +323,15 @@ with tab1:
         ax1.set_title("Línea de Tiempo de Denuncias", fontsize=12)
         st.pyplot(fig1)
 
+
+
+
+
+
+
+
+
+
 # ---------------------------------------------------------
 # PESTAÑA 2: COMPARATIVA CON "LOS DEMÁS"
 # ---------------------------------------------------------
@@ -338,6 +357,15 @@ with tab2:
 
         st.subheader("Detalle de las Zonas Restantes")
         st.dataframe(df_resto[['PROV_HECHO', 'DIST_HECHO', 'Total_Denuncias']].sort_values(by='Total_Denuncias', ascending=False).head(15), use_container_width=True)
+
+
+
+
+
+
+
+
+
 
 # ---------------------------------------------------------
 # PESTAÑA 3: MODELO PROBABILÍSTICO DE POISSON
@@ -379,6 +407,13 @@ with tab3:
             st.pyplot(fig3)
     else:
         st.warning("No hay suficientes datos históricos en la zona seleccionada para calcular la distribución de Poisson (λ = 0).")
+
+
+
+
+
+
+
 
 
 
@@ -471,3 +506,5 @@ with tab4:
 
     except Exception as e:
         st.error(f"No se pudo cargar el mapa. Verifica tu archivo GeoJSON. Error técnico: {e}")
+
+
